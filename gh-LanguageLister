@@ -1,0 +1,180 @@
+#!/usr/bin/python3
+
+import os
+import pprint
+import subprocess
+import json
+import sys
+
+def get_org_repos(orgaName):
+    """Gets all the repositories in a GitHub organization.
+
+    Args:
+      org_name: The name of the GitHub organization.
+
+    Returns:
+      A list of repository dictionaries.
+    """
+
+    orgaRepos = subprocess.run(['gh' ,'repo','list', orgaName, '--json', 'name', '--limit', '1000'], capture_output=True, text=True)
+    orgaReposParsed = json.loads(orgaRepos.stdout)
+    repositories = [repo['name'] for repo in orgaReposParsed]
+    return repositories
+
+
+def get_repo_languages(organame, repo):
+
+    isArchived = subprocess.run(['gh', 'api', "repos/"+organame+"/"+repo], capture_output=True, text=True)
+    isArchived = json.loads(isArchived.stdout)
+    if isArchived['archived']:
+        return {}
+
+    languages = subprocess.run(['gh', 'api', "repos/"+organame+"/"+repo+"/languages"], capture_output=True, text=True)
+    languages = json.loads(languages.stdout)
+
+
+    return languages
+
+
+def get_org_languages(org_name):
+    """Gets all the programming languages used in a GitHub organization.
+
+    Args:
+      org_name: The name of the GitHub organization.
+
+    Returns:
+      A dictionary of programming languages, with the total number of bytes of code
+      written in each language across all repositories in the organization.
+    """
+
+    org_languages = {}
+    repos = get_org_repos(org_name)
+    for repo in repos:
+        repo_languages = get_repo_languages(org_name, repo)
+        for language, bytes_of_code in repo_languages.items():
+            if language not in org_languages:
+                org_languages[language] = 0
+            org_languages[language] += bytes_of_code
+    return org_languages
+
+
+def select_organizations(all_orgas):
+    """Allow user to select which organizations to process.
+
+    Args:
+      all_orgas: List of all organization names
+
+    Returns:
+      List of selected organization names
+    """
+    # Check if organizations were passed as command-line arguments
+    if len(sys.argv) > 1:
+        # Parse comma-separated list from command line
+        input_orgas = sys.argv[1].split(',')
+        input_orgas = [org.strip() for org in input_orgas]
+
+        # Validate that all provided orgas exist
+        selected_orgas = []
+        for org in input_orgas:
+            if org in all_orgas:
+                selected_orgas.append(org)
+            else:
+                print(f"Warning: Organization '{org}' not found in your organizations list. Skipping.")
+
+        if selected_orgas:
+            print(f"Processing organizations: {', '.join(selected_orgas)}")
+            return selected_orgas
+        else:
+            print("No valid organizations provided. Showing all available organizations...")
+
+    # Display numbered list of organizations
+    print("\nAvailable organizations:")
+    print("-" * 50)
+    for idx, org in enumerate(all_orgas, 1):
+        print(f"{idx}. {org}")
+    print("-" * 50)
+
+    # Ask user for selection
+    print("\nEnter the numbers of organizations to process (comma-separated).")
+    print("Examples: '1,3,5' or '1' or '1,2'")
+    print("Press Enter to select all organizations.")
+
+    user_input = input("Your selection: ").strip()
+
+    # If empty, select all
+    if not user_input:
+        print("Processing all organizations...")
+        return all_orgas
+
+    # Parse user input
+    try:
+        indices = [int(idx.strip()) for idx in user_input.split(',')]
+        selected_orgas = []
+
+        for idx in indices:
+            if 1 <= idx <= len(all_orgas):
+                selected_orgas.append(all_orgas[idx - 1])
+            else:
+                print(f"Warning: Index {idx} is out of range. Skipping.")
+
+        if selected_orgas:
+            print(f"Processing organizations: {', '.join(selected_orgas)}")
+            return selected_orgas
+        else:
+            print("No valid organizations selected. Processing all organizations...")
+            return all_orgas
+
+    except ValueError:
+        print("Invalid input format. Processing all organizations...")
+        return all_orgas
+
+
+
+def main():
+    print('Fetching your organizations...')
+    orgas = subprocess.run(['gh', 'api', 'user/orgs'], capture_output=True, text=True)
+    orgaNames = [orga['login'] for orga in json.loads(orgas.stdout)]
+
+    if not orgaNames:
+        print("No organizations found for your account.")
+        return
+
+    # Let user select organizations
+    selected_orgas = select_organizations(orgaNames)
+
+    if not selected_orgas:
+        print("No organizations selected. Exiting.")
+        return
+
+    print('\nPlease be patient, this might take a while...')
+    print('Fetching all "non-archived" repositories from selected organizations...\n')
+
+    all_languages = {}
+    for org_name in selected_orgas:
+
+
+        org_languages = get_org_languages(org_name)
+        print("Programming languages used in {}:".format(org_name))
+        for language, bytes_of_code in org_languages.items():
+            print("{}: {}".format(language, bytes_of_code))
+            if language not in all_languages:
+                all_languages[language] = 0
+            all_languages[language] += bytes_of_code
+        print("#########################################################")
+        print("#########################################################")
+        print("#########################################################")
+
+    print("Summary of programming languages used across all selected organizations:")
+    for language, bytes_of_code in all_languages.items():
+        print("{}: {}".format(language, bytes_of_code))
+
+
+    return
+
+
+
+
+if __name__ == "__main__":
+    main()
+
+
