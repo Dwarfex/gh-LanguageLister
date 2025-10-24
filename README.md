@@ -9,7 +9,7 @@ Hacked together.
 ### Interactive Mode
 Run the extension without arguments to interactively select organizations:
 ```bash
-gh LanguagesLister
+gh LanguageLister
 ```
 
 You'll see a numbered list of all organizations you're a member of. You can then:
@@ -19,11 +19,11 @@ You'll see a numbered list of all organizations you're a member of. You can then
 ### Command-line Mode
 Pass a comma-separated list of organization names directly:
 ```bash
-gh LanguagesLister org1,org2,org3
+gh LanguageLister org1,org2,org3
 ```
 
 ## For development run: 
 
-gh ext remove gh-LanguagesLister & gh ext install . && gh ext exec LanguagesLister
+gh ext remove gh-LanguageLister & gh ext install . && gh ext exec LanguageLister
 
 or just "make"
