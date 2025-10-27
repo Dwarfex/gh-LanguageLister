@@ -6,6 +6,11 @@ Hacked together.
 
 ## Usage
 
+### How to install 
+Install the Github CLI: https://cli.github.com/
+
+gh extension install https://github.com/Dwarfex/gh-LanguageLister
+
 ### Interactive Mode
 Run the extension without arguments to interactively select organizations:
 ```bash
